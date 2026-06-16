@@ -1,9 +1,12 @@
+import Navbar from "./components/Navbar";
+
 function App() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <h1 className="text-4xl font-bold">
-        Shared Emotional AI Space
-      </h1>
+    <div>
+      <Navbar />
+      <main className="p-6">
+        <h2 className="text-2xl font-bold">Welcome</h2>
+      </main>
     </div>
   );
 }
