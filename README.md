@@ -15,3 +15,5 @@ AI-powered platform for anonymous group mood check-ins and emotional analytics.
 - Backend: FastAPI
 - Database: PostgreSQL or Firebase
 - AI: OpenAI API
+
+Any changes ?
