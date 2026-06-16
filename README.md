@@ -11,8 +11,8 @@ AI-powered platform for anonymous group mood check-ins and emotional analytics.
 
 ## Tech Stack
 
-- Frontend: React / Next.js
-- Backend: FastAPI
+- Frontend: React / Next.js or html/css/javascript
+- Backend: FastAPI (python)
 - Database: PostgreSQL or Firebase
 - AI: OpenAI API
 
