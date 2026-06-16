@@ -1,0 +1,17 @@
+# shared-emotional-ai-space
+AI-powered platform for anonymous group mood check-ins and emotional analytics.
+
+## Team Roles
+
+- Maxim: Frontend
+- Ghofrane: Backend
+- Veronika: AI Integration
+- Saad: User Research
+- Hasan: UI/UX & Documentation
+
+## Tech Stack
+
+- Frontend: React / Next.js
+- Backend: FastAPI
+- Database: PostgreSQL or Firebase
+- AI: OpenAI API
