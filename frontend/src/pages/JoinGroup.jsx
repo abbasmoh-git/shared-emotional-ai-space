@@ -1,18 +1,51 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function JoinGroup() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [joined, setJoined] = useState(false);
+  const navigate = useNavigate();
 
-  function handleJoin() {
-    if (!code.trim()) {
-      setError("Please enter a group code.");
+async function handleJoin() {
+  if (!code.trim()) {
+    setError("Please enter a group code.");
+    return;
+  }
+
+  setError("");
+  setJoined(false);
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/api/groups/join", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        code: code,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setError(data.detail || "Group not found.");
       return;
     }
-    setError("");
+
     setJoined(true);
+
+    setTimeout(() => {
+      navigate("/checkin");
+    }, 800);
+  } catch (error) {
+    setError("Cannot connect to server.");
   }
+}
+
+    
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
