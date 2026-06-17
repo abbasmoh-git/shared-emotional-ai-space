@@ -1,13 +1,20 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Navbar from "./components/Navbar";
+import JoinGroup from "./pages/JoinGroup";
+import Checkin from "./pages/Checkin";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
-    <div>
+    <BrowserRouter>
       <Navbar />
-      <main className="p-6">
-        <h2 className="text-2xl font-bold">Welcome</h2>
-      </main>
-    </div>
+      <Routes>
+        <Route path="/" element={<JoinGroup />} />
+        <Route path="/checkin" element={<Checkin />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
