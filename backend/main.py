@@ -68,3 +68,22 @@ def get_group(code: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Group not found")
 
     return group
+
+@app.post("/api/checkins", response_model = schemas.CheckinResponse)
+def create_checkin(checkin: schemas.CheckinCreate, db: Session = Depends(get_db)):
+    group = db.query(models.Group).filter(models.Group.id == checkin.group_id).first()
+
+    if not group:
+        raise HTTPException(status_code = 404, detail = "Group not found")
+    
+    new_checkin = models.Checkin(
+        group_id = checkin.group_id,
+        mood = checkin.mood,
+        note = checkin.note
+    )
+
+    db.add(new_checkin)
+    db.commit()
+    db.refresh(new_checkin)
+
+    return new_checkin
