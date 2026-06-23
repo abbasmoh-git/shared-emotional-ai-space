@@ -19,3 +19,20 @@ class GroupResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CheckinCreate(BaseModel):
+    group_id: int
+    mood: str
+    note: str | None = None
+
+
+class CheckinResponse(BaseModel):
+    id: int
+    group_id: int
+    mood: str
+    note: str | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
