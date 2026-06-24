@@ -5,15 +5,33 @@ function Checkin() {
   const [stress, setStress] = useState(1);
   const [note, setNote] = useState("");
 
-  function handleSubmit() {
-    console.log({
-      mood,
-      stress,
-      note,
+  async function handleSubmit() {
+  try {
+    const response = await fetch("http://127.0.0.1:8000/api/checkins", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        group_id: 1,
+        mood: mood,
+        note: note,
+      }),
     });
 
-    alert("Check-in data prepared. Backend connection will be added later.");
+    const data = await response.json();
+    console.log(data);
+
+    if (response.ok) {
+      alert("Check-in saved successfully!");
+    } else {
+      alert("Error while saving check-in: " + JSON.stringify(data));
+    }
+  } catch (error) {
+    console.error("Backend connection error:", error);
+    alert("Backend connection failed. Make sure FastAPI is running.");
   }
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
