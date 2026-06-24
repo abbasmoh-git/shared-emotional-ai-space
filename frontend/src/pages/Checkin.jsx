@@ -1,37 +1,45 @@
 import { useState } from "react";
 
+const moods = [
+  { label: "Happy", icon: "😊" },
+  { label: "Neutral", icon: "😐" },
+  { label: "Stressed", icon: "😰" },
+  { label: "Tired", icon: "😴" },
+  { label: "Burned out", icon: "🔥" },
+];
+
 function Checkin() {
-  const [mood, setMood] = useState("");
-  const [stress, setStress] = useState(1);
+  const [mood, setMood] = useState(null);
+  const [stress, setStress] = useState(3);
   const [note, setNote] = useState("");
 
   async function handleSubmit() {
-  try {
-    const response = await fetch("http://127.0.0.1:8000/api/checkins", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        group_id: 1,
-        mood: mood,
-        note: note,
-      }),
-    });
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/checkins", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          group_id: 1,
+          mood: mood ? mood.label : "",
+          note: note,
+        }),
+      });
 
-    const data = await response.json();
-    console.log(data);
+      const data = await response.json();
+      console.log(data);
 
-    if (response.ok) {
-      alert("Check-in saved successfully!");
-    } else {
-      alert("Error while saving check-in: " + JSON.stringify(data));
+      if (response.ok) {
+        alert("Check-in saved successfully!");
+      } else {
+        alert("Error while saving check-in: " + JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error("Backend connection error:", error);
+      alert("Backend connection failed. Make sure FastAPI is running.");
     }
-  } catch (error) {
-    console.error("Backend connection error:", error);
-    alert("Backend connection failed. Make sure FastAPI is running.");
   }
-}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -45,15 +53,17 @@ function Checkin() {
         </p>
 
         <div className="flex justify-center gap-3 mb-6">
-          {["😊", "😐", "😢", "😡", "😰"].map((emoji) => (
+          {moods.map((m) => (
             <button
-              key={emoji}
-              onClick={() => setMood(emoji)}
+              key={m.label}
+              onClick={() => setMood(m)}
               className={`text-3xl p-3 rounded-xl border ${
-                mood === emoji ? "bg-indigo-100 border-indigo-500" : "bg-white"
+                mood?.label === m.label
+                  ? "bg-indigo-100 border-indigo-500"
+                  : "bg-white"
               }`}
             >
-              {emoji}
+              {m.icon}
             </button>
           ))}
         </div>
