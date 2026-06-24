@@ -69,6 +69,11 @@ def get_group(code: str, db: Session = Depends(get_db)):
 
     return group
 
+@app.get("/api/checkins", response_model=list[schemas.CheckinResponse])
+def get_checkins(db: Session = Depends(get_db)):
+    return db.query(models.Checkin).order_by(models.Checkin.created_at.desc()).all()
+
+
 @app.post("/api/checkins", response_model = schemas.CheckinResponse)
 def create_checkin(checkin: schemas.CheckinCreate, db: Session = Depends(get_db)):
     group = db.query(models.Group).filter(models.Group.id == checkin.group_id).first()
