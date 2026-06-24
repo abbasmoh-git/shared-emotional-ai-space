@@ -3,7 +3,7 @@ import { useState } from "react";
 const moods = [
   { label: "Happy", icon: "😊" },
   { label: "Neutral", icon: "😐" },
-  { label: "Stressed", icon: "😣" },
+  { label: "Stressed", icon: "😰" },
   { label: "Tired", icon: "😴" },
   { label: "Burned out", icon: "🔥" },
 ];
@@ -12,70 +12,86 @@ function Checkin() {
   const [mood, setMood] = useState(null);
   const [stress, setStress] = useState(3);
   const [note, setNote] = useState("");
-  const [submitted, setSubmitted] = useState(false);
 
-  function handleSubmit() {
-    const checkinData = { mood, stress, note };
-    console.log("Check-in submitted:", checkinData);
-    setSubmitted(true);
+  async function handleSubmit() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/checkins", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          group_id: 1,
+          mood: mood ? mood.label : "",
+          note: note,
+        }),
+      });
+
+      const data = await response.json();
+      console.log(data);
+
+      if (response.ok) {
+        alert("Check-in saved successfully!");
+      } else {
+        alert("Error while saving check-in: " + JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error("Backend connection error:", error);
+      alert("Backend connection failed. Make sure FastAPI is running.");
+    }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white rounded-2xl shadow-md p-8 w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="bg-white rounded-2xl shadow-md p-8 w-full max-w-md">
+        <h1 className="text-2xl font-semibold text-center mb-4">
+          Mood Check-in
+        </h1>
 
-        <h1 className="text-2xl font-semibold text-center mb-1">How are you feeling?</h1>
-        <p className="text-gray-500 text-center text-sm mb-6">Your check-in is anonymous</p>
+        <p className="text-gray-500 text-center mb-6">
+          How are you feeling today?
+        </p>
 
-        <p className="text-sm text-gray-600 mb-2">Mood</p>
-        <div className="grid grid-cols-5 gap-2 mb-6">
+        <div className="flex justify-center gap-3 mb-6">
           {moods.map((m) => (
             <button
               key={m.label}
-              onClick={() => setMood(m.label)}
-              className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs ${
-                mood === m.label ? "border-blue-500 bg-blue-50" : "border-gray-200"
+              onClick={() => setMood(m)}
+              className={`text-3xl p-3 rounded-xl border ${
+                mood?.label === m.label
+                  ? "bg-indigo-100 border-indigo-500"
+                  : "bg-white"
               }`}
             >
-              <span className="text-xl">{m.icon}</span>
-              {m.label}
+              {m.icon}
             </button>
           ))}
         </div>
 
-        <p className="text-sm text-gray-600 mb-2">
-          Stress level: <span className="font-medium">{stress}</span>/5
-        </p>
+        <label className="block mb-2">Stress level: {stress}</label>
         <input
           type="range"
           min="1"
           max="5"
-          step="1"
           value={stress}
-          onChange={(e) => setStress(Number(e.target.value))}
+          onChange={(e) => setStress(e.target.value)}
           className="w-full mb-6"
         />
 
-        <p className="text-sm text-gray-600 mb-2">Note (optional)</p>
+        <label className="block mb-2">Optional note</label>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Anything you want to add..."
-          className="w-full border rounded-lg p-2 text-sm mb-6 resize-none"
-          rows={3}
+          placeholder="Write something..."
+          className="w-full border rounded-lg p-3 mb-6"
         />
 
         <button
           onClick={handleSubmit}
-          disabled={!mood}
-          className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-medium py-2 rounded-lg transition"
+          className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold"
         >
           Submit Check-in
         </button>
-
-        {submitted && (
-          <p className="text-green-500 text-sm text-center mt-3">✓ Check-in submitted!</p>
-        )}
       </div>
     </div>
   );
