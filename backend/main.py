@@ -1,10 +1,11 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-
+from ai import analyze_checkin
 from database import get_db, engine
 import models, schemas
-
+from dotenv import load_dotenv
+load_dotenv()
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -74,17 +75,29 @@ def get_checkins(db: Session = Depends(get_db)):
     return db.query(models.Checkin).order_by(models.Checkin.created_at.desc()).all()
 
 
-@app.post("/api/checkins", response_model = schemas.CheckinResponse)
+@app.post("/api/checkins", response_model=schemas.CheckinResponse)
 def create_checkin(checkin: schemas.CheckinCreate, db: Session = Depends(get_db)):
     group = db.query(models.Group).filter(models.Group.id == checkin.group_id).first()
 
     if not group:
-        raise HTTPException(status_code = 404, detail = "Group not found")
-    
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    # Call OpenAI to analyze mood + note
+    ai_result = analyze_checkin(
+        mood=checkin.mood,
+        note=checkin.note or "",
+        feeling_strength=checkin.stress_level or 3
+    )
+
+    # Save everything including AI results
     new_checkin = models.Checkin(
-        group_id = checkin.group_id,
-        mood = checkin.mood,
-        note = checkin.note
+        group_id=checkin.group_id,
+        mood=checkin.mood,
+        stress_level=checkin.stress_level,
+        note=checkin.note,
+        emotion=ai_result["emotion"],
+        valence=ai_result["valence"],
+        intensity=ai_result["intensity"]
     )
 
     db.add(new_checkin)
