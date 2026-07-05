@@ -17,7 +17,7 @@ class Checkin(Base):
     id = Column(Integer, primary_key =True, index = True)
     group_id = Column(Integer, nullable = False)
     mood = Column(String(50), nullable = False)
-    stress_level = Column(Integer, nullable = True)
+    feeling_strength = Column(Integer, nullable=True)
     note = Column(String(500), nullable = True)
     emotion = Column(String(50), nullable = True)
     valence = Column(Float, nullable = True )    
