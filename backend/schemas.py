@@ -24,7 +24,7 @@ class GroupResponse(BaseModel):
 class CheckinCreate(BaseModel):
     group_id: int
     mood: str
-    stress_level: int | None = None
+    feeling_strength: int | None = None  # значение от 1 до 5
     note: str | None = None
 
 
@@ -32,7 +32,7 @@ class CheckinResponse(BaseModel):
     id: int
     group_id: int
     mood: str
-    stress_level: int | None
+    feeling_strength: int | None = None  # значение от 1 до 5
     note: str | None
     emotion: str | None
     valence: float | None

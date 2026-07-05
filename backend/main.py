@@ -86,14 +86,14 @@ def create_checkin(checkin: schemas.CheckinCreate, db: Session = Depends(get_db)
     ai_result = analyze_checkin(
         mood=checkin.mood,
         note=checkin.note or "",
-        feeling_strength=checkin.stress_level or 3
+        feeling_strength=checkin.feeling_strength or 3
     )
 
     # Save everything including AI results
     new_checkin = models.Checkin(
         group_id=checkin.group_id,
         mood=checkin.mood,
-        stress_level=checkin.stress_level,
+        feeling_strength=checkin.feeling_strength,
         note=checkin.note,
         emotion=ai_result["emotion"],
         valence=ai_result["valence"],
@@ -105,3 +105,32 @@ def create_checkin(checkin: schemas.CheckinCreate, db: Session = Depends(get_db)
     db.refresh(new_checkin)
 
     return new_checkin
+
+
+
+@app.get("/api/dashboard/{group_id}")
+def get_dashboard(group_id: int, db: Session = Depends(get_db)):
+    checkins = db.query(models.Checkin).filter(models.Checkin.group_id == group_id).all()
+
+    if not checkins:
+        return {"group_id": group_id, "total": 0, "data": []}
+
+    total = len(checkins)
+
+    mood_counts = {}
+    for c in checkins:
+        mood_counts[c.mood] = mood_counts.get(c.mood, 0) + 1
+
+    checkins_with_strength = [c for c in checkins if c.feeling_strength]
+    avg_feeling = sum(c.feeling_strength for c in checkins_with_strength) / len(checkins_with_strength) if checkins_with_strength else None
+
+    checkins_with_valence = [c for c in checkins if c.valence]
+    avg_valence = sum(c.valence for c in checkins_with_valence) / len(checkins_with_valence) if checkins_with_valence else None
+
+    return {
+        "group_id": group_id,
+        "total": total,
+        "mood_distribution": mood_counts,
+        "avg_feeling_strength": round(avg_feeling, 2) if avg_feeling else None,
+        "avg_valence": round(avg_valence, 2) if avg_valence else None
+    }
