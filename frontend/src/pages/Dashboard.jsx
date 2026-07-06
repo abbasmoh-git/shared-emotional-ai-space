@@ -1,157 +1,152 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
-const moodColors = {
-  Happy: "#4ade80",
-  Neutral: "#60a5fa",
-  Stressed: "#facc15",
-  Tired: "#c084fc",
-  "Burned out": "#f87171",
-};
+const mockMoodData = [
+  { mood: "Happy", count: 6 },
+  { mood: "Neutral", count: 3 },
+  { mood: "Stressed", count: 2 },
+  { mood: "Tired", count: 1 },
+  { mood: "Burned out", count: 1 },
+];
 
-const moodIcons = {
-  Happy: "😊",
-  Neutral: "😐",
-  Stressed: "😰",
-  Tired: "😴",
-  "Burned out": "🔥",
-};
-
-function getMoodCounts(checkins) {
-  const counts = {};
-  checkins.forEach(({ mood }) => {
-    counts[mood] = (counts[mood] || 0) + 1;
-  });
-  return counts;
-}
-
-function timeAgo(dateStr) {
-  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
+const COLORS = ["#4ade80", "#60a5fa", "#facc15", "#c084fc", "#f87171"];
 
 function Dashboard() {
-  const [checkins, setCheckins] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [moodData, setMoodData] = useState(mockMoodData);
+  const [totalCheckins, setTotalCheckins] = useState(13);
+  const [avgFeelingStrength, setAvgFeelingStrength] = useState(null);
+  const [avgValence, setAvgValence] = useState(null);
+  const [usingMockData, setUsingMockData] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/checkins")
+    fetch("http://127.0.0.1:8000/api/dashboard/1")
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch");
+        if (!res.ok) throw new Error();
         return res.json();
       })
       .then((data) => {
-        setCheckins(data);
-        setLoading(false);
+        const formattedData = Object.entries(data.mood_distribution).map(
+          ([mood, count]) => ({
+            mood,
+            count,
+          })
+        );
+
+        setMoodData(formattedData);
+        setTotalCheckins(data.total);
+        setAvgFeelingStrength(data.avg_feeling_strength);
+        setAvgValence(data.avg_valence);
+        setUsingMockData(false);
       })
       .catch(() => {
-        setError("Could not load check-ins. Is the backend running?");
-        setLoading(false);
+        console.log("Using mock data");
+        setUsingMockData(true);
       });
   }, []);
 
-  const moodCounts = getMoodCounts(checkins);
-  const total = checkins.length;
-  const dominant = Object.entries(moodCounts).sort((a, b) => b[1] - a[1])[0];
+  const dominantMood = moodData.reduce((max, item) =>
+    item.count > max.count ? item : max
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2">Group Dashboard</h1>
 
-        <h1 className="text-2xl font-semibold mb-1">Group Dashboard</h1>
-        <p className="text-gray-500 text-sm mb-8">
-          Collective emotional climate — all data is anonymous
+        <p className="text-gray-500 mb-8">
+          Collective emotional overview based on anonymous check-ins
         </p>
 
-        {loading && (
-          <p className="text-gray-400 text-sm">Loading check-ins...</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-2xl shadow-md p-6">
+            <p className="text-gray-500">Total check-ins</p>
+            <p className="text-4xl font-bold">{totalCheckins}</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-md p-6">
+            <p className="text-gray-500">Dominant mood</p>
+            <p className="text-3xl font-bold">{dominantMood.mood}</p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-md p-6">
+            <p className="text-gray-500">Avg. feeling strength</p>
+            <p className="text-4xl font-bold">
+              {avgFeelingStrength ?? "—"}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-md p-6">
+            <p className="text-gray-500">Avg. valence</p>
+            <p className="text-4xl font-bold">{avgValence ?? "—"}</p>
+          </div>
+        </div>
+
+        {usingMockData && (
+          <p className="text-sm text-yellow-700 bg-yellow-100 rounded-lg p-3 mb-6">
+            Currently displaying mock data because the backend API is not
+            available.
+          </p>
         )}
 
-        {error && (
-          <p className="text-red-500 text-sm">{error}</p>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-2xl shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Mood Distribution</h2>
 
-        {!loading && !error && (
-          <>
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="bg-white rounded-xl shadow-sm p-5">
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total Check-ins</p>
-                <p className="text-3xl font-bold">{total}</p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-5">
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Dominant Mood</p>
-                <p className="text-3xl font-bold">
-                  {dominant ? `${moodIcons[dominant[0]] || "❓"} ${dominant[0]}` : "—"}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-5">
-                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Moods Tracked</p>
-                <p className="text-3xl font-bold">{Object.keys(moodCounts).length}</p>
-              </div>
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={moodData}>
+                <XAxis dataKey="mood" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
-            {/* Mood breakdown */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-              <h2 className="text-sm font-semibold text-gray-600 mb-4">Mood Breakdown</h2>
-              {Object.keys(moodCounts).length === 0 ? (
-                <p className="text-gray-400 text-sm">No check-ins yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {Object.entries(moodCounts)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([mood, count]) => (
-                      <div key={mood} className="flex items-center gap-3">
-                        <span className="text-lg">{moodIcons[mood] || "❓"}</span>
-                        <span className="text-sm w-24 text-gray-700">{mood}</span>
-                        <div className="flex-1 bg-gray-100 rounded-full h-2.5 overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all"
-                            style={{
-                              width: `${Math.round((count / total) * 100)}%`,
-                              backgroundColor: moodColors[mood] || "#94a3b8",
-                            }}
-                          />
-                        </div>
-                        <span className="text-sm text-gray-400 w-8 text-right">
-                          {Math.round((count / total) * 100)}%
-                        </span>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
+          <div className="bg-white rounded-2xl shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Mood Share</h2>
 
-            {/* Recent check-ins */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-sm font-semibold text-gray-600 mb-4">Recent Check-ins</h2>
-              {checkins.length === 0 ? (
-                <p className="text-gray-400 text-sm">No check-ins yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {checkins.slice(0, 10).map((c) => (
-                    <div
-                      key={c.id}
-                      className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3"
-                    >
-                      <span className="text-xl">{moodIcons[c.mood] || "❓"}</span>
-                      <span className="text-sm font-medium flex-1">{c.mood}</span>
-                      {c.stress_level && (
-                        <span className="text-xs text-gray-400">
-                          Stress: {c.stress_level}/5
-                        </span>
-                      )}
-                      <span className="text-xs text-gray-400">{timeAgo(c.created_at)}</span>
-                    </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={moodData}
+                  dataKey="count"
+                  nameKey="mood"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={95}
+                  label
+                >
+                  {moodData.map((entry, index) => (
+                    <Cell
+                      key={entry.mood}
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-md p-6 mt-6">
+          <h2 className="text-xl font-semibold mb-4">Backend connection</h2>
+
+          <p className="text-gray-600">
+            This dashboard calls GET /api/dashboard/1. If the backend is not
+            available, it falls back to mock data.
+          </p>
+        </div>
       </div>
     </div>
   );
