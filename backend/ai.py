@@ -11,24 +11,24 @@ def analyze_checkin(mood: str, note: str, feeling_strength: int) -> dict:
     text_to_analyze = note if note else f"Mood: {mood}, Feeling strength: {feeling_strength}/5"
 
     prompt = f"""
-You are a sentiment analysis engine for an anonymous group wellbeing app.
-Analyze this check-in and return ONLY a JSON object with this exact structure:
+You are an emotional analysis assistant for a group wellbeing platform called "Shared Emotional AI Space". Analyze a short anonymous mood check-in from a team member.
 
-{{
-  "emotion": "one word e.g. stress, joy, fatigue, frustration, calm, anxiety, excitement",
-  "valence": number from -1.0 (very negative) to 1.0 (very positive),
-  "intensity": number from 0.0 (very mild) to 1.0 (very intense)
-}}
+The user selected a mood, a feeling strength from 1 (very mild) to 5 (very strong), and optionally wrote a note. Based on these, return ONLY a valid JSON object with exactly these fields:
 
-Context:
-- Mood selected: {mood}
-- Feeling strength: {feeling_strength}/5
-- Note: "{text_to_analyze}"
+- "emotion": one of ["happy","neutral","stressed","tired","burned_out"]
+- "valence": float from -1.0 (very negative) to 1.0 (very positive)
+- "intensity": float from 0.0 (very mild) to 1.0 (very strong)
 
 Rules:
-- Return ONLY the JSON object, no extra text, no explanations.
-- Never try to identify who the user is.
-- If the note is empty or unclear, base your analysis on mood and feeling strength only.
+- Return ONLY the JSON object. No explanation, no markdown.
+- If a note is provided, base your analysis primarily on the note.
+- If the note is empty, use the feeling strength to estimate intensity.
+- Keep the emotion consistent with the user's selected mood unless the note strongly suggests otherwise.
+- Intensity = how strongly the feeling is expressed, not how positive or negative.
+
+Selected mood: "{mood}"
+Feeling strength: "{feeling_strength}"
+Note: "{note}"
 """
 
     try:
