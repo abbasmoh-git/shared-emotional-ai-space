@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=api_key) if api_key else None
 
 def analyze_checkin(mood: str, note: str, feeling_strength: int) -> dict:
     # If no note, build a minimal description from structured data
@@ -32,25 +33,23 @@ Note: "{note}"
 """
 
     try:
+        if not client:
+            raise Exception("No API key")
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3  # low temperature = more consistent, predictable output
+            temperature=0.3
         )
-
         raw = response.choices[0].message.content.strip()
-        result = json.loads(raw)  # convert JSON string → Python dict
-
+        result = json.loads(raw)
         return {
             "emotion": result.get("emotion", None),
             "valence": result.get("valence", None),
             "intensity": result.get("intensity", None)
         }
-
     except Exception as e:
-        # If AI fails, don't block the check-in — just return nulls
         print(f"AI analysis failed: {e}")
         return {
             "emotion": None,
