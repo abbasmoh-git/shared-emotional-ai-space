@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from ai import analyze_checkin
+from ai import generate_group_insights
 from database import get_db, engine
 import models, schemas
 from dotenv import load_dotenv
@@ -121,16 +122,34 @@ def get_dashboard(group_id: int, db: Session = Depends(get_db)):
     for c in checkins:
         mood_counts[c.mood] = mood_counts.get(c.mood, 0) + 1
 
+    emotion_counts = {}
+    for c in checkins:
+        if c.emotion:
+            emotion_counts[c.emotion] = emotion_counts.get(c.emotion, 0) + 1
+
     checkins_with_strength = [c for c in checkins if c.feeling_strength]
     avg_feeling = sum(c.feeling_strength for c in checkins_with_strength) / len(checkins_with_strength) if checkins_with_strength else None
 
     checkins_with_valence = [c for c in checkins if c.valence]
     avg_valence = sum(c.valence for c in checkins_with_valence) / len(checkins_with_valence) if checkins_with_valence else None
 
+    checkins_with_intensity = [c for c in checkins if c.intensity]
+    avg_intensity = sum(c.intensity for c in checkins_with_intensity) / len(checkins_with_intensity) if checkins_with_intensity else None
+
+    insights = None
+    if emotion_counts and avg_valence is not None and avg_intensity is not None:
+        insights = generate_group_insights(
+            count=total,
+            emotions=emotion_counts,
+            avg_valence=avg_valence,
+            avg_intensity=avg_intensity
+        )
+
     return {
         "group_id": group_id,
         "total": total,
         "mood_distribution": mood_counts,
         "avg_feeling_strength": round(avg_feeling, 2) if avg_feeling else None,
-        "avg_valence": round(avg_valence, 2) if avg_valence else None
+        "avg_valence": round(avg_valence, 2) if avg_valence else None,
+        "insights": insights
     }
