@@ -1,3 +1,6 @@
+from auth import hash_password, verify_password, create_access_token, decode_token
+from fastapi.security import OAuth2PasswordBearer
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -153,3 +156,40 @@ def get_dashboard(group_id: int, db: Session = Depends(get_db)):
         "avg_valence": round(avg_valence, 2) if avg_valence else None,
         "insights": insights
     }
+
+@app.post("/auth/register", response_model=schemas.UserResponse)
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+        existing = db.query(models.User).filter(models.User.email == user.email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already registered")
+
+        new_user = models.User(
+            email=user.email,
+            password=hash_password(user.password)
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
+
+
+@app.post("/auth/login", response_model=schemas.TokenResponse)
+def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+        db_user = db.query(models.User).filter(models.User.email == user.email).first()
+        if not db_user or not verify_password(user.password, db_user.password):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+
+        token = create_access_token({"sub": str(db_user.id)})
+        return {"access_token": token, "token_type": "bearer"}
+
+
+@app.get("/auth/me", response_model=schemas.UserResponse)
+def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+        payload = decode_token(token)
+        if not payload:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        return user

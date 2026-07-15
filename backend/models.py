@@ -23,3 +23,11 @@ class Checkin(Base):
     valence = Column(Float, nullable = True )    
     intensity = Column(Float, nullable = True)
     created_at = Column(TIMESTAMP, server_default = func.now())
+
+    class User(Base):
+        __tablename__ = "users"
+
+        id = Column(Integer, primary_key=True, index=True)
+        email = Column(String(100), unique=True, nullable=False)
+        password = Column(String(255), nullable=False)
+        created_at = Column(TIMESTAMP, server_default=func.now())
