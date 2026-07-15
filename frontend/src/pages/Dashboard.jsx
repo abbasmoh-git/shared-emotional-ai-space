@@ -27,6 +27,7 @@ function Dashboard() {
   const [avgFeelingStrength, setAvgFeelingStrength] = useState(null);
   const [avgValence, setAvgValence] = useState(null);
   const [usingMockData, setUsingMockData] = useState(true);
+  const [insights, setInsights] = useState(null);
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/dashboard/1")
@@ -46,6 +47,7 @@ function Dashboard() {
         setTotalCheckins(data.total);
         setAvgFeelingStrength(data.avg_feeling_strength);
         setAvgValence(data.avg_valence);
+        setInsights(data.insights);
         setUsingMockData(false);
       })
       .catch(() => {
@@ -96,6 +98,28 @@ function Dashboard() {
             Currently displaying mock data because the backend API is not
             available.
           </p>
+        )}
+
+        {insights && (insights.summary || insights.recommendation) && (
+          <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-2">Group Insights</h2>
+
+            {insights.summary && (
+              <p className="text-gray-700 mb-2">{insights.summary}</p>
+            )}
+
+            {insights.recommendation && (
+              <p className="text-gray-600 mb-2">
+                💡 {insights.recommendation}
+              </p>
+            )}
+
+            {insights.trend && (
+              <span className="inline-block text-sm px-3 py-1 rounded-full bg-gray-100 text-gray-700">
+                Trend: {insights.trend}
+              </span>
+            )}
+          </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
