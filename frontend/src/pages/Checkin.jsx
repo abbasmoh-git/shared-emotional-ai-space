@@ -21,6 +21,13 @@ function Checkin() {
       return;
     }
 
+    const storedGroupId = localStorage.getItem("groupId");
+
+    if (!storedGroupId) {
+      setError("No group selected. Please join a group first.");
+      return;
+    }
+
     setError("");
 
     try {
@@ -30,7 +37,7 @@ function Checkin() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          group_id: 1,
+          group_id: Number(storedGroupId),
           mood: mood.label,
           feeling_strength: Number(feelingStrength),
           note: note || null,
@@ -39,16 +46,21 @@ function Checkin() {
 
       const data = await response.json();
 
-      if (response.ok) {
-        setSubmitted(true);
-        setMood(null);
-        setFeelingStrength(3);
-        setNote("");
-        setTimeout(() => setSubmitted(false), 3000);
-      } else {
-        setError("Error: " + JSON.stringify(data));
+      if (!response.ok) {
+        setError(data.detail || "Could not save the check-in.");
+        return;
       }
-    } catch {
+
+      setSubmitted(true);
+      setMood(null);
+      setFeelingStrength(3);
+      setNote("");
+
+      setTimeout(() => {
+        setSubmitted(false);
+      }, 3000);
+    } catch (err) {
+      console.error(err);
       setError("Backend connection failed. Make sure FastAPI is running.");
     }
   }
@@ -56,10 +68,10 @@ function Checkin() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white rounded-2xl shadow-md p-8 w-full max-w-md">
-
         <h1 className="text-2xl font-semibold text-center mb-2">
           Mood Check-in
         </h1>
+
         <p className="text-gray-400 text-center text-sm mb-8">
           How are you feeling today? Your response is anonymous.
         </p>
@@ -81,6 +93,7 @@ function Checkin() {
             </button>
           ))}
         </div>
+
         {mood && (
           <p className="text-center text-sm text-indigo-500 font-medium -mt-5 mb-6">
             {mood.label}
@@ -90,8 +103,11 @@ function Checkin() {
         {/* Feeling strength slider */}
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Feeling strength (how strong you feel this):{" "}
-          <span className="text-indigo-500 font-bold">{feelingStrength}/5</span>
+          <span className="text-indigo-500 font-bold">
+            {feelingStrength}/5
+          </span>
         </label>
+
         <input
           type="range"
           min="1"
@@ -105,6 +121,7 @@ function Checkin() {
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Optional note
         </label>
+
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
@@ -113,10 +130,15 @@ function Checkin() {
         />
 
         {error && (
-          <p className="text-red-500 text-sm mb-4">⚠ {error}</p>
+          <p className="text-red-500 text-sm mb-4">
+            ⚠ {error}
+          </p>
         )}
+
         {submitted && (
-          <p className="text-green-500 text-sm mb-4">✓ Check-in saved!</p>
+          <p className="text-green-500 text-sm mb-4">
+            ✓ Check-in saved!
+          </p>
         )}
 
         <button
@@ -125,7 +147,6 @@ function Checkin() {
         >
           Submit Check-in
         </button>
-
       </div>
     </div>
   );
