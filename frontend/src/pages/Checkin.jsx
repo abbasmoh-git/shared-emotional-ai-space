@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const moods = [
   { label: "Happy", icon: "😊" },
@@ -14,17 +15,11 @@ function Checkin() {
   const [note, setNote] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   async function handleSubmit() {
     if (!mood) {
       setError("Please select a mood first.");
-      return;
-    }
-
-    const storedGroupId = localStorage.getItem("groupId");
-
-    if (!storedGroupId) {
-      setError("No group selected. Please join a group first.");
       return;
     }
 
@@ -37,7 +32,7 @@ function Checkin() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          group_id: Number(storedGroupId),
+          group_id: Number(localStorage.getItem("currentGroupId")) || 1,
           mood: mood.label,
           feeling_strength: Number(feelingStrength),
           note: note || null,
@@ -46,21 +41,15 @@ function Checkin() {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        setError(data.detail || "Could not save the check-in.");
-        return;
+      if (response.ok) {
+        setSubmitted(true);
+        setMood(null);
+        setFeelingStrength(3);
+        setNote("");
+      } else {
+        setError("Error: " + JSON.stringify(data));
       }
-
-      setSubmitted(true);
-      setMood(null);
-      setFeelingStrength(3);
-      setNote("");
-
-      setTimeout(() => {
-        setSubmitted(false);
-      }, 3000);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setError("Backend connection failed. Make sure FastAPI is running.");
     }
   }
@@ -68,15 +57,14 @@ function Checkin() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white rounded-2xl shadow-md p-8 w-full max-w-md">
+
         <h1 className="text-2xl font-semibold text-center mb-2">
           Mood Check-in
         </h1>
-
         <p className="text-gray-400 text-center text-sm mb-8">
           How are you feeling today? Your response is anonymous.
         </p>
 
-        {/* Mood selector */}
         <div className="flex justify-center gap-3 mb-8">
           {moods.map((m) => (
             <button
@@ -93,21 +81,16 @@ function Checkin() {
             </button>
           ))}
         </div>
-
         {mood && (
           <p className="text-center text-sm text-indigo-500 font-medium -mt-5 mb-6">
             {mood.label}
           </p>
         )}
 
-        {/* Feeling strength slider */}
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Feeling strength (how strong you feel this):{" "}
-          <span className="text-indigo-500 font-bold">
-            {feelingStrength}/5
-          </span>
+          <span className="text-indigo-500 font-bold">{feelingStrength}/5</span>
         </label>
-
         <input
           type="range"
           min="1"
@@ -117,36 +100,41 @@ function Checkin() {
           className="w-full accent-indigo-500 mb-8"
         />
 
-        {/* Note */}
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Optional note
         </label>
-
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="A short note helps us understand your mood better 💬"
-          className="w-full border border-gray-200 rounded-lg p-3 mb-6 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          className="w-full border border-gray-200 rounded-lg p-3 mb-2 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-indigo-300"
         />
 
         {error && (
-          <p className="text-red-500 text-sm mb-4">
-            ⚠ {error}
-          </p>
+          <p className="text-red-500 text-sm mb-4">⚠ {error}</p>
         )}
 
         {submitted && (
-          <p className="text-green-500 text-sm mb-4">
-            ✓ Check-in saved!
-          </p>
+          <div className="text-center mt-1 mb-3">
+            <p className="text-green-500 text-sm mb-3">✓ Check-in submitted!</p>
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 rounded-lg transition"
+            >
+              See group dashboard →
+            </button>
+          </div>
         )}
 
-        <button
-          onClick={handleSubmit}
-          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold transition-colors"
-        >
-          Submit Check-in
-        </button>
+        {!submitted && (
+          <button
+            onClick={handleSubmit}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold transition-colors"
+          >
+            Submit Check-in
+          </button>
+        )}
+
       </div>
     </div>
   );

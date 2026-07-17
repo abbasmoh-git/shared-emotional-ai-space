@@ -1,59 +1,77 @@
-from auth import hash_password, verify_password, create_access_token, decode_token
-from fastapi.security import OAuth2PasswordBearer
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv
+from auth import hash_password, verify_password, create_access_token, decode_token
 from ai import analyze_checkin
 from ai import generate_group_insights
 from database import get_db, engine
 import models, schemas
-from dotenv import load_dotenv
+
 load_dotenv()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    payload = decode_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-    "http://localhost:5173",
-    "http://localhost:5174",
-],
+        "http://localhost:5173",
+        "http://localhost:5174",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-
 @app.post("/api/groups/create", response_model=schemas.GroupResponse)
-def create_group(group: schemas.GroupCreate, db: Session = Depends(get_db)):
+def create_group(group: schemas.GroupCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     existing = db.query(models.Group).filter(models.Group.code == group.code).first()
-
     if existing:
         raise HTTPException(status_code=400, detail="Group code already exists")
 
     new_group = models.Group(name=group.name, code=group.code)
-
     db.add(new_group)
     db.commit()
     db.refresh(new_group)
 
+    user_group = models.UserGroup(user_id=current_user.id, group_id=new_group.id)
+    db.add(user_group)
+    db.commit()
+
     return new_group
 
-
 @app.post("/api/groups/join")
-def join_group(body: schemas.GroupJoin, db: Session = Depends(get_db)):
+def join_group(body: schemas.GroupJoin, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     group = db.query(models.Group).filter(models.Group.code == body.code).first()
-
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
+
+    existing = db.query(models.UserGroup).filter(
+        models.UserGroup.user_id == current_user.id,
+        models.UserGroup.group_id == group.id
+    ).first()
+
+    if not existing:
+        user_group = models.UserGroup(user_id=current_user.id, group_id=group.id)
+        db.add(user_group)
+        db.commit()
 
     return {
         "success": True,
@@ -64,36 +82,36 @@ def join_group(body: schemas.GroupJoin, db: Session = Depends(get_db)):
         }
     }
 
+@app.get("/api/groups/mine")
+def get_my_groups(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    user_groups = db.query(models.UserGroup).filter(models.UserGroup.user_id == current_user.id).all()
+    group_ids = [ug.group_id for ug in user_groups]
+    groups = db.query(models.Group).filter(models.Group.id.in_(group_ids)).all()
+    return [{"id": g.id, "name": g.name, "code": g.code} for g in groups]
 
 @app.get("/api/groups/{code}", response_model=schemas.GroupResponse)
 def get_group(code: str, db: Session = Depends(get_db)):
     group = db.query(models.Group).filter(models.Group.code == code).first()
-
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
-
     return group
 
 @app.get("/api/checkins", response_model=list[schemas.CheckinResponse])
-def get_checkins(db: Session = Depends(get_db)):
-    return db.query(models.Checkin).order_by(models.Checkin.created_at.desc()).all()
-
+def get_checkins(group_id: int, db: Session = Depends(get_db)):
+    return db.query(models.Checkin).filter(models.Checkin.group_id == group_id).order_by(models.Checkin.created_at.desc()).all()
 
 @app.post("/api/checkins", response_model=schemas.CheckinResponse)
 def create_checkin(checkin: schemas.CheckinCreate, db: Session = Depends(get_db)):
     group = db.query(models.Group).filter(models.Group.id == checkin.group_id).first()
-
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    # Call OpenAI to analyze mood + note
     ai_result = analyze_checkin(
         mood=checkin.mood,
         note=checkin.note or "",
         feeling_strength=checkin.feeling_strength or 3
     )
 
-    # Save everything including AI results
     new_checkin = models.Checkin(
         group_id=checkin.group_id,
         mood=checkin.mood,
@@ -109,8 +127,6 @@ def create_checkin(checkin: schemas.CheckinCreate, db: Session = Depends(get_db)
     db.refresh(new_checkin)
 
     return new_checkin
-
-
 
 @app.get("/api/dashboard/{group_id}")
 def get_dashboard(group_id: int, db: Session = Depends(get_db)):
@@ -159,37 +175,35 @@ def get_dashboard(group_id: int, db: Session = Depends(get_db)):
 
 @app.post("/auth/register", response_model=schemas.UserResponse)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
-        existing = db.query(models.User).filter(models.User.email == user.email).first()
-        if existing:
-            raise HTTPException(status_code=400, detail="Email already registered")
+    existing = db.query(models.User).filter(models.User.email == user.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
 
-        new_user = models.User(
-            email=user.email,
-            password=hash_password(user.password)
-        )
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        return new_user
-
+    new_user = models.User(
+        email=user.email,
+        password=hash_password(user.password)
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
 
 @app.post("/auth/login", response_model=schemas.TokenResponse)
 def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
-        db_user = db.query(models.User).filter(models.User.email == user.email).first()
-        if not db_user or not verify_password(user.password, db_user.password):
-            raise HTTPException(status_code=401, detail="Invalid email or password")
+    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if not db_user or not verify_password(user.password, db_user.password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
-        token = create_access_token({"sub": str(db_user.id)})
-        return {"access_token": token, "token_type": "bearer"}
-
+    token = create_access_token({"sub": str(db_user.id)})
+    return {"access_token": token, "token_type": "bearer"}
 
 @app.get("/auth/me", response_model=schemas.UserResponse)
 def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-        payload = decode_token(token)
-        if not payload:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+    payload = decode_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-        user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        return user
+    user = db.query(models.User).filter(models.User.id == int(payload["sub"])).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
