@@ -69,7 +69,6 @@ function JoinGroup() {
       setMyGroups((prev) => {
         const updated = [...prev, data];
         localStorage.setItem(userKey, JSON.stringify(updated));
-        alert("Saved under: " + userKey + " | value: " + localStorage.getItem(userKey));
         return updated;
       });
       localStorage.setItem("currentGroupId", data.id);
