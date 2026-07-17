@@ -162,15 +162,27 @@ function JoinGroup() {
                             <p className="font-medium text-gray-800">{group.name}</p>
                             <p className="text-xs text-gray-400">{group.code}</p>
                           </div>
-                          <button
-                            onClick={() => {
-                              localStorage.setItem("currentGroupId", group.id);
-                              navigate("/checkin");
-                            }}
-                            className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition"
-                          >
-                            Check in →
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                localStorage.setItem("currentGroupId", group.id);
+                                navigate("/checkin");
+                              }}
+                              className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition"
+                            >
+                              Check in →
+                            </button>
+                            <button
+                              onClick={() => {
+                                const updated = myGroups.filter((g) => g.code !== group.code);
+                                setMyGroups(updated);
+                                localStorage.setItem(userKey, JSON.stringify(updated));
+                              }}
+                              className="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg transition"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
