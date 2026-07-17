@@ -31,3 +31,11 @@ class User(Base):
         email = Column(String(100), unique=True, nullable=False)
         password = Column(String(255), nullable=False)
         created_at = Column(TIMESTAMP, server_default=func.now())
+
+class UserGroup(Base):
+    __tablename__ = "user_groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+    group_id = Column(Integer, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())

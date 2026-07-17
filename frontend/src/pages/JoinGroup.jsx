@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+
+const userKey = "myGroups_" + (localStorage.getItem("userEmail") || "guest");
 
 function JoinGroup() {
   const [joinCode, setJoinCode] = useState("");
@@ -7,13 +9,28 @@ function JoinGroup() {
   const [joinError, setJoinError] = useState("");
   const [createError, setCreateError] = useState("");
   const [createdCode, setCreatedCode] = useState(null);
-  const userKey = "myGroups_" + (localStorage.getItem("userEmail") || "guest");
   const [myGroups, setMyGroups] = useState(() => {
     const saved = localStorage.getItem(userKey);
     return saved ? JSON.parse(saved) : [];
   });
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    fetch("http://127.0.0.1:8000/api/groups/mine", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setMyGroups(data);
+          localStorage.setItem(userKey, JSON.stringify(data));
+        }
+      })
+      .catch(() => console.log("Could not fetch groups"));
+  }, []);
 
   async function handleJoin() {
     if (!joinCode.trim()) {
@@ -24,7 +41,10 @@ function JoinGroup() {
     try {
       const res = await fetch("http://127.0.0.1:8000/api/groups/join", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        },
         body: JSON.stringify({ code: joinCode }),
       });
       const data = await res.json();
@@ -57,7 +77,10 @@ function JoinGroup() {
     try {
       const res = await fetch("http://127.0.0.1:8000/api/groups/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        },
         body: JSON.stringify({ name: groupName, code }),
       });
       const data = await res.json();
@@ -145,53 +168,53 @@ function JoinGroup() {
         </div>
 
         {/* My groups */}
-                <div className="bg-white rounded-2xl shadow-md p-6">
-                  <h2 className="text-lg font-semibold mb-4">👥 My groups</h2>
-                  {myGroups.length === 0 ? (
-                    <p className="text-gray-400 text-sm text-center py-4">
-                      You haven't joined any groups yet. Create one or enter a code above.
-                    </p>
-                  ) : (
-                    <div className="flex flex-col gap-3">
-                      {myGroups.map((group) => (
-                        <div
-                          key={group.code}
-                          className="flex items-center justify-between border rounded-lg px-4 py-3"
-                        >
-                          <div>
-                            <p className="font-medium text-gray-800">{group.name}</p>
-                            <p className="text-xs text-gray-400">{group.code}</p>
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => {
-                                localStorage.setItem("currentGroupId", group.id);
-                                navigate("/checkin");
-                              }}
-                              className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition"
-                            >
-                              Check in →
-                            </button>
-                            <button
-                              onClick={() => {
-                                const updated = myGroups.filter((g) => g.code !== group.code);
-                                setMyGroups(updated);
-                                localStorage.setItem(userKey, JSON.stringify(updated));
-                              }}
-                              className="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg transition"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+        <div className="bg-white rounded-2xl shadow-md p-6">
+          <h2 className="text-lg font-semibold mb-4">👥 My groups</h2>
+          {myGroups.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-4">
+              You haven't joined any groups yet. Create one or enter a code above.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {myGroups.map((group) => (
+                <div
+                  key={group.code}
+                  className="flex items-center justify-between border rounded-lg px-4 py-3"
+                >
+                  <div>
+                    <p className="font-medium text-gray-800">{group.name}</p>
+                    <p className="text-xs text-gray-400">{group.code}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        localStorage.setItem("currentGroupId", group.id);
+                        navigate("/checkin");
+                      }}
+                      className="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition"
+                    >
+                      Check in →
+                    </button>
+                    <button
+                      onClick={() => {
+                        const updated = myGroups.filter((g) => g.code !== group.code);
+                        setMyGroups(updated);
+                        localStorage.setItem(userKey, JSON.stringify(updated));
+                      }}
+                      className="text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg transition"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-
-              </div>
+              ))}
             </div>
-          );
-        }
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+}
 
 export default JoinGroup;

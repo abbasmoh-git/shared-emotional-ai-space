@@ -4,13 +4,20 @@ import { useNavigate, Link } from "react-router-dom";
 function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
 
   async function handleRegister() {
-    if (!email || !password) {
+    if (!email || !password || !confirmPassword) {
       setError("Please fill in all fields.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
     setLoading(true);
@@ -51,13 +58,48 @@ function Register() {
         />
 
         <label className="text-sm text-gray-600 block mb-1">Password</label>
-        <input
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full border rounded-lg px-4 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
+        <div className="relative mb-4">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full border rounded-lg px-4 py-2 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-2 text-gray-400 hover:text-gray-600 text-sm"
+          >
+            {showPassword ? "🙈" : "👁️"}
+          </button>
+        </div>
+
+        <label className="text-sm text-gray-600 block mb-1">Repeat password</label>
+        <div className="relative mb-4">
+          <input
+            type={showConfirmPassword ? "text" : "password"}
+            placeholder="••••••••"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className={`w-full border rounded-lg px-4 py-2 text-sm pr-10 focus:outline-none focus:ring-2 ${
+              confirmPassword && password !== confirmPassword
+                ? "border-red-400 focus:ring-red-400"
+                : "focus:ring-blue-400"
+            }`}
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-3 top-2 text-gray-400 hover:text-gray-600 text-sm"
+          >
+            {showConfirmPassword ? "🙈" : "👁️"}
+          </button>
+        </div>
+
+        {confirmPassword && password !== confirmPassword && (
+          <p className="text-red-500 text-sm mb-3">⚠ Passwords do not match.</p>
+        )}
 
         {error && <p className="text-red-500 text-sm mb-3">⚠ {error}</p>}
 
